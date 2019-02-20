@@ -5,7 +5,7 @@
   "table_entries": [
     {
       "table": "MyEgress.swtrace",
-      "default_action": true,
+      "default_action": false,
       "action_name": "MyEgress.add_swtrace",
       "action_params": {
          "swid": 3
