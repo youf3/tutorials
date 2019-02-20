@@ -1,91 +1,66 @@
 #!/bin/bash
-
-# Print commands and exit on errors
 set -xe
 
-sudo add-apt-repository ppa:webupd8team/sublime-text-3
-sudo add-apt-repository ppa:webupd8team/atom
+VM_TYPE=${1:-dev}
 
+# Create user sdn
+useradd -m -d /home/sdn -s /bin/bash sdn
+echo "sdn:rocks" | chpasswd
+echo "sdn ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/99_sdn
+chmod 440 /etc/sudoers.d/99_sdn
+usermod -aG vboxsf sdn
+update-locale LC_ALL="en_US.UTF-8"
+
+if [ ${VM_TYPE} = "tutorial" ]
+then
+    su sdn <<'EOF'
+cd /home/sdn
+bash /vagrant/tutorial-bootstrap.sh
+EOF
+fi
 apt-get update
+apt-get install software-properties-common -y
 
-KERNEL=$(uname -r)
 DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade
-apt-get install -y --no-install-recommends \
-  atom \
-  autoconf \
-  automake \
-  bison \
-  build-essential \
-  ca-certificates \
-  cmake \
-  cpp \
-  curl \
-  emacs24 \
-  flex \
-  git \
-  libboost-dev \
-  libboost-filesystem-dev \
-  libboost-iostreams1.58-dev \
-  libboost-program-options-dev \
-  libboost-system-dev \
-  libboost-test-dev \
-  libboost-thread-dev \
-  libc6-dev \
-  libevent-dev \
-  libffi-dev \
-  libfl-dev \
-  libgc-dev \
-  libgc1c2 \
-  libgflags-dev \
-  libgmp-dev \
-  libgmp10 \
-  libgmpxx4ldbl \
-  libjudy-dev \
-  libpcap-dev \
-  libreadline6 \
-  libreadline6-dev \
-  libssl-dev \
-  libtool \
-  linux-headers-$KERNEL\
-  lubuntu-desktop \
-  make \
-  mktemp \
-  pkg-config \
-  python \
-  python-dev \
-  python-ipaddr \
-  python-pip \
-  python-scapy \
-  python-setuptools \
-  sublime-text-installer \
-  tcpdump \
-  unzip \
-  vim \
-  wget \
-  xcscope-el \
-  xterm
 
-useradd -m -d /home/p4 -s /bin/bash p4
-echo "p4:p4" | chpasswd
-echo "p4 ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/99_p4
-chmod 440 /etc/sudoers.d/99_p4
-usermod -aG vboxsf p4
+apt-get -y --no-install-recommends install \
+    avahi-daemon \
+    bridge-utils \
+    git \
+    git-review \
+    htop \
+    python2.7 \
+    python2.7-dev \
+    valgrind \
+    zip unzip \
+    tcpdump \
+    vlan \
+    ntp \
+    vim nano emacs \
+    arping \
+    gawk \
+    texinfo \
+    build-essential \
+    iptables \
+    automake \
+    autoconf \
+    libtool \
+    isc-dhcp-server
 
-cd /usr/share/lubuntu/wallpapers/
-cp /home/vagrant/p4-logo.png .
-rm lubuntu-default-wallpaper.png
-ln -s p4-logo.png lubuntu-default-wallpaper.png
-rm /home/vagrant/p4-logo.png
-cd /home/vagrant
-sed -i s@#background=@background=/usr/share/lubuntu/wallpapers/1604-lubuntu-default-wallpaper.png@ /etc/lightdm/lightdm-gtk-greeter.conf
+DEBIAN_FRONTEND=noninteractive apt-get -yq install wireshark
 
-# Disable screensaver
-apt-get -y remove light-locker
+# Install pip and some python deps (others are defined in install-p4-tools.sh)
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python2.7 get-pip.py --force-reinstall
+rm -f get-pip.py
+pip install ipaddress psutil
 
-# Automatically log into the P4 user
-cat << EOF | tee -a /etc/lightdm/lightdm.conf.d/10-lightdm.conf
-[SeatDefaults]
-autologin-user=p4
-autologin-user-timeout=0
-user-session=Lubuntu
+tee -a /etc/ssh/sshd_config <<EOF
+
+UseDNS no
+EOF
+
+su sdn <<'EOF'
+cd /home/sdn
+bash /vagrant/user-bootstrap.sh
 EOF

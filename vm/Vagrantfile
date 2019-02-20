@@ -1,29 +1,26 @@
-# -*- mode: ruby -*-
-# vi: set ft=ruby :
+P4_VM_TYPE = ENV['P4_VM_TYPE'] || "dev"
 
 Vagrant.configure(2) do |config|
-  config.vm.box = "fso/xenial64-desktop"
-  config.vm.define "p4-tutorial" do |tutorial|
+  if P4_VM_TYPE == "tutorial"
+    config.vm.box = "fso/xenial64-desktop"
+  else
+    config.vm.box = "bento/ubuntu-16.04"
   end
   config.vm.provider "virtualbox" do |vb|
-    vb.name = "P4 Tutorial" + Time.now.strftime(" %Y-%m-%d")
+    vb.name = "ONOS+P4 " + P4_VM_TYPE + " " + Time.now.strftime("(%Y-%m-%d)")
     vb.gui = true
-    vb.memory = 2048
-    vb.cpus = 2
-    vb.customize ["modifyvm", :id, "--cableconnected1", "on"]
-    vb.customize ["storageattach", :id, 
-                "--storagectl", "IDE Controller", 
-                "--port", "0", "--device", "0", 
-                "--type", "dvddrive", 
-                "--medium", "emptydrive"]    
-    vb.customize ["modifyvm", :id, "--vram", "32"]
-
+    vb.cpus = P4_VM_TYPE == "tutorial" ? 4 : 2
+    vb.memory = 4096
+    if P4_VM_TYPE == "tutorial"
+        vb.customize ["storageattach", :id,
+                        "--storagectl", "IDE Controller",
+                        "--port", "0", "--device", "1",
+                        "--type", "dvddrive",
+                        "--medium", "emptydrive"]
+        vb.customize ['modifyvm', :id, '--clipboard', 'bidirectional']
+    end
   end
-  config.vm.synced_folder '.', '/vagrant', disabled: true  
-  config.vm.hostname = "p4"
-  config.vm.provision "file", source: "p4-logo.png",   destination: "/home/vagrant/p4-logo.png"
-  config.vm.provision "file", source: "p4_16-mode.el", destination: "/home/vagrant/p4_16-mode.el"
-  config.vm.provision "file", source: "p4.vim",        destination: "/home/vagrant/p4.vim"
-  config.vm.provision "shell", path: "root-bootstrap.sh"
-  config.vm.provision "shell", privileged: false, path: "user-bootstrap.sh"
+  config.vm.hostname = "onos-p4-" + P4_VM_TYPE
+  config.vm.network "private_network", :type => 'dhcp', :adapter => 2
+  config.vm.provision "shell", path: "root-bootstrap.sh", :args => P4_VM_TYPE
 end
