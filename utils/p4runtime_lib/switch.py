@@ -17,7 +17,7 @@ from abc import abstractmethod
 from datetime import datetime
 
 import grpc
-from p4 import p4runtime_pb2
+from p4.v1 import p4runtime_pb2
 from p4.tmp import p4config_pb2
 
 MSG_LOG_MAX_LEN = 1024
@@ -39,8 +39,9 @@ class SwitchConnection(object):
         self.p4info = None
         self.channel = grpc.insecure_channel(self.address)
         if proto_dump_file is not None:
-            interceptor = GrpcRequestLogger(proto_dump_file)
-            self.channel = grpc.intercept_channel(self.channel, interceptor)
+            pass
+            # interceptor = GrpcRequestLogger(proto_dump_file)
+            #self.channel = grpc.intercept_channel(self.channel, interceptor)
         self.client_stub = p4runtime_pb2.P4RuntimeStub(self.channel)
         self.requests_stream = IterableQueue()
         self.stream_msg_resp = self.client_stub.StreamChannel(iter(self.requests_stream))
@@ -127,34 +128,34 @@ class SwitchConnection(object):
                 yield response
 
 
-class GrpcRequestLogger(grpc.UnaryUnaryClientInterceptor,
-                        grpc.UnaryStreamClientInterceptor):
-    """Implementation of a gRPC interceptor that logs request to a file"""
+# class GrpcRequestLogger(grpc.UnaryUnaryClientInterceptor,
+#                         grpc.UnaryStreamClientInterceptor):
+#     """Implementation of a gRPC interceptor that logs request to a file"""
 
-    def __init__(self, log_file):
-        self.log_file = log_file
-        with open(self.log_file, 'w') as f:
-            # Clear content if it exists.
-            f.write("")
+#     def __init__(self, log_file):
+#         self.log_file = log_file
+#         with open(self.log_file, 'w') as f:
+#             # Clear content if it exists.
+#             f.write("")
 
-    def log_message(self, method_name, body):
-        with open(self.log_file, 'a') as f:
-            ts = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-            msg = str(body)
-            f.write("\n[%s] %s\n---\n" % (ts, method_name))
-            if len(msg) < MSG_LOG_MAX_LEN:
-                f.write(str(body))
-            else:
-                f.write("Message too long (%d bytes)! Skipping log...\n" % len(msg))
-            f.write('---\n')
+#     def log_message(self, method_name, body):
+#         with open(self.log_file, 'a') as f:
+#             ts = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+#             msg = str(body)
+#             f.write("\n[%s] %s\n---\n" % (ts, method_name))
+#             if len(msg) < MSG_LOG_MAX_LEN:
+#                 f.write(str(body))
+#             else:
+#                 f.write("Message too long (%d bytes)! Skipping log...\n" % len(msg))
+#             f.write('---\n')
 
-    def intercept_unary_unary(self, continuation, client_call_details, request):
-        self.log_message(client_call_details.method, request)
-        return continuation(client_call_details, request)
+#     def intercept_unary_unary(self, continuation, client_call_details, request):
+#         self.log_message(client_call_details.method, request)
+#         return continuation(client_call_details, request)
 
-    def intercept_unary_stream(self, continuation, client_call_details, request):
-        self.log_message(client_call_details.method, request)
-        return continuation(client_call_details, request)
+#     def intercept_unary_stream(self, continuation, client_call_details, request):
+#         self.log_message(client_call_details.method, request)
+#         return continuation(client_call_details, request)
 
 class IterableQueue(Queue):
     _sentinel = object()
