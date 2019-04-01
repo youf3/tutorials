@@ -114,7 +114,6 @@ def program_switch(addr, device_id, sw_conf_file, workdir, proto_dump_fpath,):
         sw = bmv2.Bmv2SwitchConnection(address=addr, device_id=device_id,
                                        proto_dump_file=proto_dump_fpath)
     elif target == 'tofino':
-        global sw
         sw = tofino.TofinoSwitchConnection(address = addr,
                                            device_id = device_id,
                                            proto_dump_file=proto_dump_fpath)
@@ -144,10 +143,7 @@ def program_switch(addr, device_id, sw_conf_file, workdir, proto_dump_fpath,):
         for entry in table_entries:
             info(tableEntryToString(entry))
             insertTableEntry(sw, entry, p4info_helper)
-    if target == 'bmv2':
-        sw.shutdown()
 
-def shutdownTofino():
     sw.shutdown()
 
 def insertTableEntry(sw, flow, p4info_helper):

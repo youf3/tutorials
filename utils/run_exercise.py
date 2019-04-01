@@ -225,7 +225,6 @@ class ExerciseRunner:
 
         self.do_net_cli()
         # stop right after the CLI is exited
-        p4runtime_lib.simple_controller.shutdownTofino()
         self.net.stop()
 
 
