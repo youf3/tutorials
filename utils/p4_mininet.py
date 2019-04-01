@@ -16,6 +16,7 @@
 from mininet.net import Mininet
 from mininet.node import Switch, Host
 from mininet.log import setLogLevel, info, error, debug
+from mininet.link import Intf
 from mininet.moduledeps import pathCheck
 from sys import exit
 import os
@@ -28,10 +29,20 @@ from netstat import check_listening_on_port
 SWITCH_START_TIMEOUT = 10 # seconds
 
 class P4Host(Host):
-    def config(self, **params):
+    def config(self, **params):        
         r = super(Host, self).config(**params)
+        if self.name == 'h1':
+            print('Adding enp130s0f0 to h1')
+            Intf('enp130s0f0', self)
+            self.defaultIntf().setIP('10.0.1.1/24')
+            self.defaultIntf().setMAC('00:00:00:00:01:01')
+            self.cmd("ip route add 10.0.2.0/24 dev enp130s0f0")
+            self.cmd("ip route add 10.0.3.0/24 dev enp130s0f0")
+            self.cmd("arp -s 10.0.2.2 00:00:00:00:02:02")
+            self.cmd("arp -s 10.0.3.3 00:00:00:00:03:03")
+            self.cmd("sysctl -w net.ipv6.conf.all.disable_ipv6=1")
 
-        self.defaultIntf().rename("eth0")
+        # self.defaultIntf().rename("eth0")
 
         for off in ["rx", "tx", "sg"]:
             cmd = "/sbin/ethtool --offload eth0 %s off" % off
@@ -68,6 +79,8 @@ class P4Switch(Switch):
                  enable_debugger = False,
                  **kwargs):
         Switch.__init__(self, name, **kwargs)
+        print('******* P4Switch without GRPC initializing')
+        print('sw_path ------' + json_path)
         assert(sw_path)
         assert(json_path)
         # make sure that the provided sw_path is valid
