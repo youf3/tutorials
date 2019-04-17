@@ -4,7 +4,7 @@ import socket
 import sys
 import argparse
 
-HOST = "192.168.50.241"
+HOST = "192.168.105.241"
 PORT = 59999
 
 def main(args):
