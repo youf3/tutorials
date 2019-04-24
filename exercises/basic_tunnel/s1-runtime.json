@@ -1,7 +1,8 @@
 {
-  "target": "bmv2",
-  "p4info": "build/basic_tunnel.p4info",
-  "bmv2_json": "build/basic_tunnel.json",
+  "target": "tofino",
+  "p4info": "build-tofino/basic.p4info",
+  "context_json": "build-tofino/context.json",
+  "config": "build-tofino/tofino.bin",  
   "table_entries": [
     {
       "table": "MyIngress.ipv4_lpm",
@@ -11,7 +12,7 @@
       "action_name": "MyIngress.ipv4_forward",
       "action_params": {
         "dstAddr": "00:00:00:00:01:01",
-        "port": 1
+        "port": 152
       }
     },
     {
@@ -22,7 +23,7 @@
       "action_name": "MyIngress.ipv4_forward",
       "action_params": {
         "dstAddr": "00:00:00:02:02:00",
-        "port": 2
+        "port": 148
       }
     },
     {
@@ -33,7 +34,7 @@
       "action_name": "MyIngress.ipv4_forward",
       "action_params": {
         "dstAddr": "00:00:00:03:03:00",
-        "port": 3
+        "port": 144
       }
     },
 
@@ -44,7 +45,7 @@
       },
       "action_name": "MyIngress.myTunnel_forward",
       "action_params": {
-        "port": 1
+        "port": 152
       }
     },
     {
@@ -54,7 +55,7 @@
       },
       "action_name": "MyIngress.myTunnel_forward",
       "action_params": {
-        "port": 2
+        "port": 148
       }
     },
     {
@@ -64,7 +65,7 @@
       },
       "action_name": "MyIngress.myTunnel_forward",
       "action_params": {
-        "port": 3
+        "port": 144
       }
     }
   ]
