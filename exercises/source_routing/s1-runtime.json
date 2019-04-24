@@ -1,6 +1,7 @@
 {
-  "target": "bmv2",
-  "p4info": "build/source_routing.p4info",
-  "bmv2_json": "build/source_routing.json",
+  "target": "tofino",
+  "p4info": "build-tofino/basic.p4info",
+  "context_json": "build-tofino/context.json",
+  "config": "build-tofino/tofino.bin",  
   "table_entries": [ ]
 } 
