@@ -22,6 +22,7 @@ apt-get -y --no-install-recommends install \
     sudo \
     iputils-ping \
     ntp \
+    net-tools \
     vim nano emacs \
     arping \
     gawk \
