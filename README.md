@@ -48,3 +48,15 @@ They contain the dependencies, versions, and installation procedure.
 You can run them directly on an Ubuntu 16.04 machine:
 - `sudo ./root-bootstrap.sh`
 - `sudo ./user-bootstrap.sh`
+
+## Docker
+To build your docker image:
+- `cd docker`
+- make your changes
+- `docker build -t <image-name>:<tag-name> .`
+- `docker run --privileged -t -i --rm <image-name>:<tag-name> bash`
+
+To pull from an existing docker image:
+- `docker pull wangfx95/p4tutorial-bmv2`
+- `docker run --privileged -t -i --rm wangfx95/p4tutorial-bmv2 bash`
+

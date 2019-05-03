@@ -6,7 +6,7 @@ cp /etc/skel/.profile ~/
 cp /etc/skel/.bash_logout ~/
 
 # Build and install P4 tools
-bash /vagrant/install-p4-tools.sh
+bash /root/install-p4-tools.sh
 # We'll delete bmv2 sources later...
 cp ~/p4tools/bmv2/tools/veth_setup.sh ~/veth_setup.sh
 cp ~/p4tools/bmv2/tools/veth_teardown.sh ~/veth_teardown.sh
