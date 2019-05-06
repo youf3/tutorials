@@ -57,6 +57,6 @@ To build your docker image:
 - `docker run --privileged -t -i --rm <image-name>:<tag-name> bash`
 
 To pull from an existing docker image:
-- `docker pull wangfx95/p4tutorial-bmv2`
-- `docker run --privileged -t -i --rm wangfx95/p4tutorial-bmv2 bash`
+- `docker pull wangfx95/p4tutorial-rc3`
+- `docker run --privileged -t -i --rm wangfx95/p4tutorial-brc3 bash`
 

@@ -42,4 +42,6 @@ python2.7 get-pip.py --force-reinstall
 rm -f get-pip.py
 pip install ipaddress psutil
 
-bash /root/user-bootstrap.sh
+cd /root
+git clone -b icair_p4rt_1.0.0.rc3 https://github.com/youf3/tutorials.git
+bash /root/tutorials/docker/user-bootstrap.sh
