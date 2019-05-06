@@ -12,8 +12,9 @@ cp ~/p4tools/bmv2/tools/veth_setup.sh ~/veth_setup.sh
 cp ~/p4tools/bmv2/tools/veth_teardown.sh ~/veth_teardown.sh
 
 # Mininet
+cd /root
 git clone git://github.com/mininet/mininet
-/mininet/util/install.sh -nv
+/root/mininet/util/install.sh -nv
 service openvswitch-switch start
 
 
