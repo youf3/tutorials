@@ -19,9 +19,8 @@ import json
 import os
 import sys
 
-import bmv2
+import bmv2, tofino
 import helper
-
 
 def error(msg):
     print >> sys.stderr, ' - ERROR! ' + msg
@@ -66,7 +65,7 @@ def main():
 def check_switch_conf(sw_conf, workdir):
     required_keys = ["p4info"]
     files_to_check = ["p4info"]
-    target_choices = ["bmv2"]
+    target_choices = ["bmv2", "tofino"]
 
     if "target" not in sw_conf:
         raise ConfException("missing key 'target'")
@@ -77,6 +76,12 @@ def check_switch_conf(sw_conf, workdir):
     if target == 'bmv2':
         required_keys.append("bmv2_json")
         files_to_check.append("bmv2_json")
+    elif target == 'tofino':
+        required_keys.append("context_json")
+        files_to_check.append("context_json")
+        required_keys.append("config")
+        files_to_check.append("config")
+
 
     for conf_key in required_keys:
         if conf_key not in sw_conf or len(sw_conf[conf_key]) == 0:
@@ -88,8 +93,9 @@ def check_switch_conf(sw_conf, workdir):
             raise ConfException("file does not exist %s" % real_path)
 
 
-def program_switch(addr, device_id, sw_conf_file, workdir, proto_dump_fpath):
+def program_switch(addr, device_id, sw_conf_file, workdir, proto_dump_fpath,):
     sw_conf = json_load_byteified(sw_conf_file)
+
     try:
         check_switch_conf(sw_conf=sw_conf, workdir=workdir)
     except ConfException as e:
@@ -107,29 +113,38 @@ def program_switch(addr, device_id, sw_conf_file, workdir, proto_dump_fpath):
     if target == "bmv2":
         sw = bmv2.Bmv2SwitchConnection(address=addr, device_id=device_id,
                                        proto_dump_file=proto_dump_fpath)
+    elif target == 'tofino':
+        sw = tofino.TofinoSwitchConnection(address = addr,
+                                           device_id = device_id,
+                                           proto_dump_file=proto_dump_fpath)
     else:
         raise Exception("Don't know how to connect to target %s" % target)
 
-    try:
-        sw.MasterArbitrationUpdate()
 
-        if target == "bmv2":
-            info("Setting pipeline config (%s)..." % sw_conf['bmv2_json'])
-            bmv2_json_fpath = os.path.join(workdir, sw_conf['bmv2_json'])
-            sw.SetForwardingPipelineConfig(p4info=p4info_helper.p4info,
-                                           bmv2_json_file_path=bmv2_json_fpath)
-        else:
-            raise Exception("Should not be here")
+    sw.MasterArbitrationUpdate()
 
-        if 'table_entries' in sw_conf:
-            table_entries = sw_conf['table_entries']
-            info("Inserting %d table entries..." % len(table_entries))
-            for entry in table_entries:
-                info(tableEntryToString(entry))
-                insertTableEntry(sw, entry, p4info_helper)
-    finally:
-        sw.shutdown()
+    if target == "bmv2":
+        info("Setting pipeline config (%s)..." % sw_conf['bmv2_json'])        
+        bmv2_json_fpath = os.path.join(workdir, sw_conf['bmv2_json'])
+        sw.SetForwardingPipelineConfig(p4info=p4info_helper.p4info,
+                                       bmv2_json_file_path=bmv2_json_fpath)
 
+    elif target == "tofino":
+        info("Setting pipeline config (%s)..." % sw_conf['context_json'])            
+        sw.SetForwardingPipelineConfig(p4info=p4info_helper.p4info,
+                                       prog_name = "name", bin_path= sw_conf['config'],
+                                       cxt_json_path = sw_conf['context_json'])
+    else:
+        raise Exception("Should not be here")
+
+    if 'table_entries' in sw_conf:
+        table_entries = sw_conf['table_entries']
+        info("Inserting %d table entries..." % len(table_entries))
+        for entry in table_entries:
+            info(tableEntryToString(entry))
+            insertTableEntry(sw, entry, p4info_helper)
+
+    sw.shutdown()
 
 def insertTableEntry(sw, flow, p4info_helper):
     table_name = flow['table']

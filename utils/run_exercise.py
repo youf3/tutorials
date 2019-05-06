@@ -26,8 +26,10 @@ from p4_mininet import P4Switch, P4Host
 
 from mininet.net import Mininet
 from mininet.topo import Topo
-from mininet.link import TCLink
+from mininet.link import TCLink, Intf
 from mininet.cli import CLI
+from mininet.util import quietRun
+from mininet.log import info
 
 from p4runtime_switch import P4RuntimeSwitch
 import p4runtime_lib.simple_controller
@@ -40,10 +42,9 @@ def configureP4Switch(**switch_args):
     if "sw_path" in switch_args and 'grpc' in switch_args['sw_path']:
         # If grpc appears in the BMv2 switch target, we assume will start P4Runtime
         class ConfiguredP4RuntimeSwitch(P4RuntimeSwitch):
-            def __init__(self, *opts, **kwargs):
+            def __init__(self, *opts, **kwargs):                
                 kwargs.update(switch_args)
                 P4RuntimeSwitch.__init__(self, *opts, **kwargs)
-
             def describe(self):
                 print "%s -> gRPC port: %d" % (self.name, self.grpc_port)
 
@@ -63,13 +64,12 @@ def configureP4Switch(**switch_args):
 
         return ConfiguredP4Switch
 
-
 class ExerciseTopo(Topo):
     """ The mininet topology class for the P4 tutorial exercises.
         A custom class is used because the exercises make a few topology
         assumptions, mostly about the IP and MAC addresses.
     """
-    def __init__(self, hosts, switches, links, log_dir, **opts):
+    def __init__(self, hosts, switches, links, log_dir, tofino_addr, **opts):
         Topo.__init__(self, **opts)
         host_links = []
         switch_links = []
@@ -87,7 +87,15 @@ class ExerciseTopo(Topo):
         switch_links.sort(key=link_sort_key)
 
         for sw in switches:
-            self.addSwitch(sw, log_file="%s/%s.log" %(log_dir, sw))
+            # Setting s1 to tofino
+            if sw == 's1':
+                self.addSwitch(sw, log_file="%s/%s.log" %(log_dir, sw), switch_type = 'tofino', tofino_addr = tofino_addr)
+            elif sw == 's2' :
+                self.addSwitch(sw, log_file="%s/%s.log" %(log_dir, sw), tofino_port =[2, 'enp130s0f1'])
+            elif sw == 's3' :
+                self.addSwitch(sw, log_file="%s/%s.log" %(log_dir, sw), tofino_port =[2, 'enp3s0'])
+            else:
+                raise Exception ('Unknown Switch %s' % sw)
 
         for link in host_links:
             host_name = link['node1']
@@ -98,15 +106,18 @@ class ExerciseTopo(Topo):
             host_mac = '00:00:00:00:%02x:%02x' % (sw_num, host_num)
             # Each host IP should be /24, so all exercise traffic will use the
             # default gateway (the switch) without sending ARP requests.
-            self.addHost(host_name, ip=host_ip+'/24', mac=host_mac)
-            self.addLink(host_name, host_sw,
-                         delay=link['latency'], bw=link['bandwidth'],
-                         addr1=host_mac, addr2=host_mac)
-            self.addSwitchPort(host_sw, host_name)
+            if host_name == 'h1':
+                self.addHost(host_name, ip=host_ip+'/24', mac=host_mac)                
+            else:                    
+                self.addHost(host_name, ip=host_ip+'/24', mac=host_mac)                
+                self.addLink(host_name, host_sw,
+                             delay=link['latency'], bw=link['bandwidth'],
+                             addr1=host_mac, addr2=host_mac)
+                self.addSwitchPort(host_sw, host_name)
 
         for link in switch_links:
             self.addLink(link['node1'], link['node2'],
-                        delay=link['latency'], bw=link['bandwidth'])
+                         delay=link['latency'], bw=link['bandwidth'])
             self.addSwitchPort(link['node1'], link['node2'])
             self.addSwitchPort(link['node2'], link['node1'])
 
@@ -158,7 +169,8 @@ class ExerciseRunner:
 
 
     def __init__(self, topo_file, log_dir, pcap_dir,
-                       switch_json, bmv2_exe='simple_switch', quiet=False):
+                 switch_json, bmv2_exe='simple_switch', quiet=False,
+                 tofino_addr = None):
         """ Initializes some attributes and reads the topology json. Does not
             actually run the exercise. Use run_exercise() for that.
 
@@ -190,6 +202,8 @@ class ExerciseRunner:
         self.pcap_dir = pcap_dir
         self.switch_json = switch_json
         self.bmv2_exe = bmv2_exe
+        self.sw_addr = '127.0.0.1'
+        self.tofino_addr = tofino_addr
 
 
     def run_exercise(self):
@@ -251,19 +265,21 @@ class ExerciseRunner:
         """
         self.logger("Building mininet topology.")
 
-        self.topo = ExerciseTopo(self.hosts, self.switches.keys(), self.links, self.log_dir)
+        self.topo = ExerciseTopo(self.hosts, self.switches.keys(), self.links, self.log_dir,
+                                 self.tofino_addr)
 
         switchClass = configureP4Switch(
                 sw_path=self.bmv2_exe,
                 json_path=self.switch_json,
                 log_console=True,
-                pcap_dump=self.pcap_dir)
-
+                pcap_dump=self.pcap_dir,
+                sw_addr = self.sw_addr)
         self.net = Mininet(topo = self.topo,
                       link = TCLink,
                       host = P4Host,
                       switch = switchClass,
                       controller = None)
+
 
     def program_switch_p4runtime(self, sw_name, sw_dict):
         """ This method will use P4Runtime to program the switch using the
@@ -272,12 +288,13 @@ class ExerciseRunner:
         sw_obj = self.net.get(sw_name)
         grpc_port = sw_obj.grpc_port
         device_id = sw_obj.device_id
+        sw_addr = sw_obj.sw_addr
         runtime_json = sw_dict['runtime_json']
         self.logger('Configuring switch %s using P4Runtime with file %s' % (sw_name, runtime_json))
         with open(runtime_json, 'r') as sw_conf_file:
             outfile = '%s/%s-p4runtime-requests.txt' %(self.log_dir, sw_name)
             p4runtime_lib.simple_controller.program_switch(
-                addr='127.0.0.1:%d' % grpc_port,
+                addr='{}:{}'.format(sw_addr, grpc_port),
                 device_id=device_id,
                 sw_conf_file=sw_conf_file,
                 workdir=os.getcwd(),
@@ -321,21 +338,37 @@ class ExerciseRunner:
         for host_name in self.topo.hosts():
             h = self.net.get(host_name)
             h_iface = h.intfs.values()[0]
+
             link = h_iface.link
 
-            sw_iface = link.intf1 if link.intf1 != h_iface else link.intf2
-            # phony IP to lie to the host about
-            host_id = int(host_name[1:])
-            sw_ip = '10.0.%d.254' % host_id
+            if link is None:
+                # This is h1
+                # phony IP to lie to the host about
+                host_id = int(host_name[1:])
+                sw_ip = '10.0.%d.254' % host_id
 
-            # Ensure each host's interface name is unique, or else
-            # mininet cannot shutdown gracefully
-            h.defaultIntf().rename('%s-eth0' % host_name)
-            # static arp entries and default routes
-            h.cmd('arp -i %s -s %s %s' % (h_iface.name, sw_ip, sw_iface.mac))
-            h.cmd('ethtool --offload %s rx off tx off' % h_iface.name)
-            h.cmd('ip route add %s dev %s' % (sw_ip, h_iface.name))
-            h.setDefaultRoute("via %s" % sw_ip)
+                # Ensure each host's interface name is unique, or else
+                # mininet cannot shutdown gracefully
+                # h.defaultIntf().rename('%s-eth0' % host_name)
+                # static arp entries and default routes
+                h.cmd('arp -i %s -s %s %s' % (h_iface.name, sw_ip, h_iface.mac))
+                h.cmd('ethtool --offload %s rx off tx off' % h_iface.name)
+                h.cmd('ip route add %s dev %s' % (sw_ip, h_iface.name))
+                h.setDefaultRoute("via %s" % sw_ip)
+            else:
+                sw_iface = link.intf1 if link.intf1 != h_iface else link.intf2
+                # phony IP to lie to the host about
+                host_id = int(host_name[1:])
+                sw_ip = '10.0.%d.254' % host_id
+
+                # Ensure each host's interface name is unique, or else
+                # mininet cannot shutdown gracefully
+                h.defaultIntf().rename('%s-eth0' % host_name)
+                # static arp entries and default routes
+                h.cmd('arp -i %s -s %s %s' % (h_iface.name, sw_ip, sw_iface.mac))
+                h.cmd('ethtool --offload %s rx off tx off' % h_iface.name)
+                h.cmd('ip route add %s dev %s' % (sw_ip, h_iface.name))
+                h.setDefaultRoute("via %s" % sw_ip)
 
 
     def do_net_cli(self):
@@ -394,6 +427,8 @@ def get_args():
     parser.add_argument('-j', '--switch_json', type=str, required=False)
     parser.add_argument('-b', '--behavioral-exe', help='Path to behavioral executable',
                                 type=str, required=False, default='simple_switch')
+    parser.add_argument('-i', '--tofino_addr', help='Tofino_switch_address',
+                                type=str, required=False, default=None)
     return parser.parse_args()
 
 
@@ -403,7 +438,7 @@ if __name__ == '__main__':
 
     args = get_args()
     exercise = ExerciseRunner(args.topo, args.log_dir, args.pcap_dir,
-                              args.switch_json, args.behavioral_exe, args.quiet)
+                              args.switch_json, args.behavioral_exe, args.quiet, args.tofino_addr)
 
     exercise.run_exercise()
 

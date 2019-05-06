@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import struct
+import os
 
 from scapy.all import sniff, sendp, hexdump, get_if_list, get_if_hwaddr, bind_layers
 from scapy.all import Packet, IPOption
@@ -12,7 +13,7 @@ def get_if():
     ifs=get_if_list()
     iface=None
     for i in get_if_list():
-        if "eth0" in i:
+        if "lo" != i:
             iface=i
             break;
     if not iface:
@@ -49,7 +50,8 @@ bind_layers(SourceRoute, SourceRoute, bos=0)
 bind_layers(SourceRoute, SourceRoutingTail, bos=1)
 
 def main():
-    iface = 'h2-eth0'
+    ifaces = filter(lambda i: 'e' in i, os.listdir('/sys/class/net/'))
+    iface = ifaces[0]
     print "sniffing on %s" % iface
     sys.stdout.flush()
     sniff(filter="udp and port 4321", iface = iface,

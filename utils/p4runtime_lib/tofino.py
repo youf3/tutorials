@@ -14,16 +14,26 @@
 #
 from switch import SwitchConnection
 from p4.tmp import p4config_pb2
+import struct
 
 
-def buildDeviceConfig(bmv2_json_file_path=None):
-    "Builds the device config for BMv2"
+def buildDeviceConfig(prog_name = None, bin_path = None, cxt_json_path = None):
     device_config = p4config_pb2.P4DeviceConfig()
-    device_config.reassign = True
-    with open(bmv2_json_file_path) as f:
-        device_config.device_data = f.read()
+    with open(bin_path, 'rb') as bin_f:
+        with open(cxt_json_path, 'r') as cxt_json_f:
+            device_config.device_data = ""
+            device_config.device_data += struct.pack("<i", len(prog_name))
+            device_config.device_data += prog_name
+            tofino_bin = bin_f.read()
+            device_config.device_data += struct.pack("<i", len(tofino_bin))
+            device_config.device_data += tofino_bin
+            cxt_json = cxt_json_f.read()
+            device_config.device_data += struct.pack("<i", len(cxt_json))
+            device_config.device_data += cxt_json
     return device_config
 
-class Bmv2SwitchConnection(SwitchConnection):
+
+class TofinoSwitchConnection(SwitchConnection):
+        
     def buildDeviceConfig(self, **kwargs):
         return buildDeviceConfig(**kwargs)

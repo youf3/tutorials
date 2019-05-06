@@ -18,12 +18,13 @@ endif
 
 # Set BMV2_SWITCH_EXE to override the BMv2 target
 ifdef BMV2_SWITCH_EXE
-run_args += -b $(BMV2_SWITCH_EXE)
+run_args += -b $(BMV2_SWITCH_EXE) -i ${TOFINO_ADDR} 
 endif
 
 all: run
 
 run: build
+	@echo $(run_args)
 	sudo python $(RUN_SCRIPT) -t $(TOPO) $(run_args)
 
 stop:
