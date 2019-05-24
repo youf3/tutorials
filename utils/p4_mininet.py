@@ -32,12 +32,12 @@ class P4Host(Host):
     def config(self, **params):        
         r = super(Host, self).config(**params)
         if self.name == 'h1':
-            print('Adding enp130s0f0 to h1')
-            Intf('enp130s0f0', self)
+            print('Adding l2tpeth0 to h1')
+            Intf('l2tpeth0', self)
             self.defaultIntf().setIP('10.0.1.1/24')
             self.defaultIntf().setMAC('00:00:00:00:01:01')
-            self.cmd("ip route add 10.0.2.0/24 dev enp130s0f0")
-            self.cmd("ip route add 10.0.3.0/24 dev enp130s0f0")
+            self.cmd("ip route add 10.0.2.0/24 dev l2tpeth0")
+            self.cmd("ip route add 10.0.3.0/24 dev l2tpeth0")
             self.cmd("arp -s 10.0.2.2 00:00:00:00:02:02")
             self.cmd("arp -s 10.0.3.3 00:00:00:00:03:03")
             self.cmd("sysctl -w net.ipv6.conf.all.disable_ipv6=1")

@@ -91,9 +91,9 @@ class ExerciseTopo(Topo):
             if sw == 's1':
                 self.addSwitch(sw, log_file="%s/%s.log" %(log_dir, sw), switch_type = 'tofino', tofino_addr = tofino_addr)
             elif sw == 's2' :
-                self.addSwitch(sw, log_file="%s/%s.log" %(log_dir, sw), tofino_port =[2, 'enp130s0f1'])
+                self.addSwitch(sw, log_file="%s/%s.log" %(log_dir, sw), tofino_port =[2, 'l2tpeth1'])
             elif sw == 's3' :
-                self.addSwitch(sw, log_file="%s/%s.log" %(log_dir, sw), tofino_port =[2, 'enp3s0'])
+                self.addSwitch(sw, log_file="%s/%s.log" %(log_dir, sw), tofino_port =[2, 'l2tpeth2'])
             else:
                 raise Exception ('Unknown Switch %s' % sw)
 
